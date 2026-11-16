@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ARGUS EYES · Local Global CCTV & OSINT Map</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Michroma&display=swap" rel="stylesheet" />
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <!-- Top HUD Bar -->
+  <header class="hud-top">
+    <div class="brand">
+      <span class="pulse-dot"></span>
+      <div>
+        <div class="brand-title">ARGUS EYES</div>
+        <div class="brand-sub" id="hudStats">Initializing local index…</div>
+      </div>
+    </div>
+
+    <div class="search-wrap">
+      <input id="searchInput" type="search" placeholder="Search cameras, roads, cities, countries… ( / )" autocomplete="off" />
+      <div id="searchResults" class="search-results hidden"></div>
+    </div>
+
+    <div class="hud-actions">
+      <div class="segmented" id="kindFilter" title="Filter camera feed type">
+        <button class="seg active" data-kind="all">All Cams</button>
+        <button class="seg" data-kind="video">Live Video</button>
+        <button class="seg" data-kind="image">Snapshots</button>
+      </div>
+
+      <button class="hud-btn" id="btnRandom" title="Jump to a random camera">🎲 Random Cam</button>
+      <button class="hud-btn" id="btnWall" title="Open Multi-Camera Video Wall">📺 Video Wall <span id="wallCount" class="badge">0</span></button>
+      <button class="hud-btn" id="btnSources" title="Data Sources & API Keys">📡 Sources</button>
+    </div>
+  </header>
+
+  <!-- Main Map Canvas -->
+  <div id="map"></div>
+
+  <!-- Left Layer & Basemap Controls -->
+  <aside class="hud-left">
+    <div class="panel-card">
+      <div class="card-title">LIVE LAYERS</div>
+      <label class="layer-toggle">
+        <input type="checkbox" id="lyrCams" checked />
+        <span class="swatch swatch-cam"></span>
+        <span class="lbl">CCTV & Webcams</span>
+        <span class="cnt" id="cntCams">0</span>
+      </label>
+      <label class="layer-toggle">
+        <input type="checkbox" id="lyrFlights" />
+        <span class="swatch swatch-flight"></span>
+        <span class="lbl">Live Flights (ADS-B)</span>
+        <span class="cnt" id="cntFlights">off</span>
+      </label>
+      <label class="layer-toggle">
+        <input type="checkbox" id="lyrQuakes" />
+        <span class="swatch swatch-quake"></span>
+        <span class="lbl">Earthquakes (USGS)</span>
+        <span class="cnt" id="cntQuakes">off</span>
+      </label>
+      <label class="layer-toggle">
+        <input type="checkbox" id="lyrEvents" />
+        <span class="swatch swatch-event"></span>
+        <span class="lbl">Natural Events (NASA)</span>
+        <span class="cnt" id="cntEvents">off</span>
+      </label>
+      <label class="layer-toggle">
+        <input type="checkbox" id="lyrRadar" />
+        <span class="swatch swatch-radar"></span>
+        <span class="lbl">Weather Radar</span>
+        <span class="cnt" id="cntRadar">off</span>
+      </label>
+      <label class="layer-toggle">
+        <input type="checkbox" id="lyrShips" />
+        <span class="swatch swatch-ship"></span>
+        <span class="lbl">AIS Vessels</span>
+        <span class="cnt" id="cntShips">off</span>
+      </label>
+      <label class="layer-toggle" title="Uncheck to show every raw green/blue dot globally">
+        <input type="checkbox" id="chkCluster" checked />
+        <span class="swatch" style="background:#6366f1"></span>
+        <span class="lbl">Cluster Dense Areas</span>
+        <span class="cnt">z&lt;7</span>
+      </label>
+    </div>
+
+    <div class="panel-card">
+      <div class="card-title">BASEMAP</div>
+      <div class="segmented full" id="basemapSwitch">
+        <button class="seg active" data-style="dark">Dark</button>
+        <button class="seg" data-style="sat">Satellite</button>
+        <button class="seg" data-style="street">Streets</button>
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <div class="card-title">QUICK REGIONS</div>
+      <div class="region-grid">
+        <button class="chip" data-fly="-98.5,38.5,3.8">🇺🇸 USA</button>
+        <button class="chip" data-fly="-119.5,36.7,6.2">🌴 California</button>
+        <button class="chip" data-fly="-0.12,51.50,9.5">🇬🇧 London</button>
+        <button class="chip" data-fly="25.0,62.5,5.5">🇫🇮 Finland</button>
+        <button class="chip" data-fly="114.17,22.30,10.3">🇭🇰 Hong Kong</button>
+        <button class="chip" data-fly="103.82,1.35,10.5">🇸🇬 Singapore</button>
+        <button class="chip" data-fly="151.20,-33.86,9.2">🇦🇺 Sydney</button>
+        <button class="chip" data-fly="174.76,-41.28,5.5">🇳🇿 New Zealand</button>
+        <button class="chip" data-fly="-19.0,64.8,6.2">🇮🇸 Iceland</button>
+        <button class="chip" data-fly="-123.1,49.25,7.2">🇨🇦 Vancouver</button>
+      </div>
+    </div>
+
+    <div class="panel-card legend-card">
+      <div class="card-title">LEGEND</div>
+      <div class="legend-row"><span class="dot dot-video"></span> Live Video Stream (HLS / MP4)</div>
+      <div class="legend-row"><span class="dot dot-image"></span> Live Auto-Refresh Snapshot</div>
+      <div class="legend-row"><span class="dot" style="background:#f59e0b"></span> Embedded Player (Windy)</div>
+      <div class="legend-row"><span class="dot dot-cluster"></span> Camera Cluster (click to zoom)</div>
+    </div>
+  </aside>
+
+  <!-- Right Camera Inspector Drawer -->
+  <aside class="inspector hidden" id="inspector">
+    <div class="inspector-head">
+      <div>
+        <div class="inspector-badge" id="camBadge">LIVE FEED</div>
+        <h2 class="inspector-title" id="camTitle">Select a camera</h2>
+        <div class="inspector-sub" id="camSub">—</div>
+      </div>
+      <button class="icon-btn" id="btnCloseInspector" title="Close (Esc)">✕</button>
+    </div>
+
+    <div class="media-stage" id="mediaStage">
+      <div class="media-placeholder">Loading feed…</div>
+    </div>
+
+    <div class="media-controls">
+      <div class="refresh-bar" id="refreshBar">
+        <span class="live-pill" id="liveStatus">● LIVE</span>
+        <label class="small-lbl">Refresh:
+          <select id="refreshRate">
+            <option value="1000">1s</option>
+            <option value="2000" selected>2s</option>
+            <option value="3000">3s</option>
+            <option value="5000">5s</option>
+            <option value="10000">10s</option>
+            <option value="0">Paused</option>
+          </select>
+        </label>
+        <button class="mini-btn" id="btnReloadImg">↻ Now</button>
+      </div>
+      <div class="action-row">
+        <button class="primary-btn" id="btnPinWall">＋ Pin to Video Wall</button>
+        <a class="secondary-btn" id="btnRawLink" href="#" target="_blank" rel="noopener">↗ Raw Feed</a>
+        <a class="secondary-btn" id="btnGmaps" href="#" target="_blank" rel="noopener">📍 Street View</a>
+      </div>
+    </div>
+
+    <div class="meta-grid" id="camMeta"></div>
+
+    <div class="nearby-section">
+      <div class="card-title">NEARBY CAMERAS</div>
+      <div class="nearby-list" id="nearbyList"></div>
+    </div>
+  </aside>
+
+  <!-- Multi-Cam Video Wall Modal -->
+  <section class="modal hidden" id="wallModal">
+    <div class="modal-box wall-box">
+      <div class="modal-head">
+        <div>
+          <div class="brand-title">MULTI-CAMERA VIDEO WALL</div>
+          <div class="brand-sub">Pin any camera on the map · 🟢 Green = continuous live video, 🔵 Cyan = auto-refresh snapshots</div>
+        </div>
+        <div class="modal-actions">
+          <label class="small-lbl">Snap Rate:
+            <select id="wallRefreshRate">
+              <option value="1000">1s</option>
+              <option value="2000" selected>2s</option>
+              <option value="3000">3s</option>
+              <option value="5000">5s</option>
+              <option value="10000">10s</option>
+              <option value="0">Paused</option>
+            </select>
+          </label>
+          <button class="hud-btn" id="btnWallRandomVideo" title="Load 6 continuous live video streams (HLS/MP4)">🎬 Fill 6 Live Videos</button>
+          <button class="hud-btn" id="btnWallRandom">🎲 Fill 6 Random Cams</button>
+          <button class="hud-btn" id="btnWallClear">🗑 Clear All</button>
+          <button class="icon-btn" id="btnCloseWall">✕</button>
+        </div>
+      </div>
+      <div class="wall-grid" id="wallGrid"></div>
+    </div>
+  </section>
+
+  <!-- Data Sources & Status Modal -->
+  <section class="modal hidden" id="sourcesModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <div>
+          <div class="brand-title">DATA SOURCES & INDEX STATUS</div>
+          <div class="brand-sub" id="sourcesSummary">Aggregated public open-data feeds</div>
+        </div>
+        <div class="modal-actions">
+          <button class="hud-btn" id="btnRebuildIndex">↻ Rebuild Index Now</button>
+          <button class="icon-btn" id="btnCloseSources">✕</button>
+        </div>
+      </div>
+      <div class="sources-filter-bar">
+        <button class="mini-btn" id="btnEnableAllSrc">Enable All</button>
+        <button class="mini-btn" id="btnDisableAllSrc">Disable All</button>
+        <span class="small-lbl">Click any source row to toggle its visibility on the map.</span>
+      </div>
+      <div class="sources-table-wrap">
+        <table class="sources-table">
+          <thead>
+            <tr>
+              <th>Show</th>
+              <th>Source / Agency</th>
+              <th>Region</th>
+              <th>Cameras</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="sourcesTbody"></tbody>
+        </table>
+      </div>
+      <div class="sources-footer">
+        <strong>Want even more cameras?</strong> Edit <code>config.json</code> in the folder to add free API keys for 17+ US/Canada 511 states, QLDTraffic / TfNSW Australia, Sweden Trafikverket, or add your own streams in <code>custom_cameras.json</code>.
+      </div>
+    </div>
+  </section>
+
+  <!-- Bottom Coordinate / Status Bar -->
+  <footer class="hud-bottom">
+    <div id="cursorCoords">LAT — · LON —</div>
+    <div id="viewStats">Zoom in or click any cluster to inspect individual cameras</div>
+  </footer>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

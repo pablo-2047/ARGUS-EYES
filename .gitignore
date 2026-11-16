@@ -1,0 +1,15 @@
+# Secrets & local configuration (NEVER commit real API keys)
+config.json
+.env
+.env.*
+
+# Runtime index cache
+data/
+
+# Dependencies & logs
+node_modules/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

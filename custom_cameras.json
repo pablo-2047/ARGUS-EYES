@@ -1,0 +1,12 @@
+[
+  {
+    "_comment": "Add your own public cameras here. Fields: id, name, lat, lon and ONE OF img (jpg snapshot URL), hls (.m3u8 URL), mp4, youtube (video id of a live stream), iframe (embed URL), page (link). Then click 'Rebuild index' in the app or restart."
+  },
+  {
+    "id": "example-iss",
+    "name": "Example: NASA ISS live (YouTube embed - replace with any live video id)",
+    "lat": 28.5729,
+    "lon": -80.649,
+    "page": "https://www.nasa.gov/live/"
+  }
+]

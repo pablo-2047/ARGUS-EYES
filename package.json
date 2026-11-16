@@ -1,0 +1,13 @@
+{
+  "name": "argus-eyes",
+  "version": "1.0.0",
+  "description": "Local, self-hosted map of public traffic cameras & webcams with live flight / quake / event layers",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "refresh": "node -e \"fetch('http://127.0.0.1:8080/api/refresh').then(r=>r.text()).then(console.log)\""
+  },
+  "engines": { "node": ">=18" },
+  "license": "MIT"
+}
